@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
-from agentguard.approval import ApprovalManager, ApprovalStatus
+from agentguard.approval import ApprovalStatus, ApprovalStore, SQLiteApprovalManager
 from agentguard.benchmark import DEFAULT_MODES, BenchmarkRunner, BenchmarkStore
 from agentguard.policy import PolicyDocument, PolicyEngine
 from agentguard.replay import ReplayEngine
@@ -116,11 +116,11 @@ def create_app(
     *,
     runtime_dir: Path = Path("runtime"),
     policy_path: Path = Path("policies/default.yaml"),
-    approvals: ApprovalManager | None = None,
+    approvals: ApprovalStore | None = None,
 ) -> FastAPI:
     app = FastAPI(title="AgentGuard DataFlow API", version="0.1.0")
     store = TraceStore(runtime_dir)
-    approval_manager = approvals or ApprovalManager()
+    approval_manager = approvals or SQLiteApprovalManager(runtime_dir / "approvals.db")
     benchmark_store = BenchmarkStore(runtime_dir)
 
     @app.get("/api/v1/health")

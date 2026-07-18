@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from mcp.server.fastmcp import FastMCP
 
+from agentguard.approval import SQLiteApprovalManager
 from agentguard.async_gateway import AsyncToolGateway
 from agentguard.mcp_runtime.downstream import DownstreamManager
 from agentguard.policy import PolicyEngine
@@ -42,6 +43,7 @@ async def lifespan(_: FastMCP[Any]) -> AsyncIterator[None]:
             protection_enabled=protection,
             output_dir=runtime_dir / "traces",
             policy=policy,
+            approvals=SQLiteApprovalManager(runtime_dir / "approvals.db"),
         )
         try:
             yield

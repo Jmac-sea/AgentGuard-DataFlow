@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from agentguard.approval import ApprovalManager, ApprovalStatus
+from agentguard.approval import ApprovalManager, ApprovalStatus, SQLiteApprovalManager
 from agentguard.gateway import ToolApprovalRequiredError, ToolGateway
 from agentguard.models import DecisionAction, PolicyDecision
 from agentguard.policy import PolicyDocument, PolicyEngine
@@ -126,3 +126,28 @@ def test_gateway_executes_only_after_approval(tmp_path: Path) -> None:
 
     assert result["number"] == 1
     assert len(environment.issues) == 1
+
+
+def test_sqlite_approval_is_consumed_across_manager_instances(tmp_path: Path) -> None:
+    database = tmp_path / "approvals.db"
+    api_manager = SQLiteApprovalManager(database)
+    request = api_manager.create(
+        call_id="call_1",
+        session_id="ses_shared",
+        tool_name="github.create_issue",
+        arguments={"title": "A", "body": "B"},
+        decision=approval_decision(),
+    )
+    approved = api_manager.approve(request.approval_id)
+    assert approved.token is not None
+
+    gateway_manager = SQLiteApprovalManager(database)
+    consumed = gateway_manager.authorize(
+        token=approved.token,
+        session_id="ses_shared",
+        tool_name="github.create_issue",
+        arguments={"title": "A", "body": "B"},
+    )
+
+    assert consumed.status is ApprovalStatus.CONSUMED
+    assert api_manager.get(request.approval_id).status is ApprovalStatus.CONSUMED

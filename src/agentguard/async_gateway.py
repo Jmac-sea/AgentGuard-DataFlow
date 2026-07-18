@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from agentguard.approval import ApprovalManager
+from agentguard.approval import ApprovalManager, ApprovalStore
 from agentguard.dataflow import ArtifactRegistry
 from agentguard.gateway import ToolApprovalRequiredError, ToolBlockedError
 from agentguard.mcp_runtime.downstream import DownstreamManager
@@ -28,7 +28,7 @@ class AsyncToolGateway:
         protection_enabled: bool,
         output_dir: Path,
         policy: PolicyEngine | None = None,
-        approvals: ApprovalManager | None = None,
+        approvals: ApprovalStore | None = None,
     ) -> None:
         self.registry = registry
         self.downstream = downstream

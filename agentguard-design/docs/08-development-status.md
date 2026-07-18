@@ -23,6 +23,8 @@
 - 人工审批状态机。
 - 一次性Approval Token，绑定会话、工具和参数摘要。
 - Token过期、参数变化和重复消费检查。
+- SQLite审批持久化，API与stdio MCP Gateway可跨进程共享。
+- 数据库只持久化Token哈希，不保存可直接使用的原始Token。
 
 ### 真实 stdio MCP 链路
 
@@ -86,8 +88,8 @@ github.create_issue
 ```text
 Ruff: 通过
 Mypy strict: 通过
-Pytest: 32 passed
-Coverage: 89%
+Pytest: 33 passed
+Coverage: 88%
 Frontend build: passed
 Frontend tests: 2 passed
 ```

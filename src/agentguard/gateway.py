@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from agentguard.approval import ApprovalManager, ApprovalRequest
+from agentguard.approval import ApprovalManager, ApprovalRequest, ApprovalStore
 from agentguard.dataflow import ArtifactRegistry
 from agentguard.models import DecisionAction, PolicyDecision, ToolCall, ToolResult
 from agentguard.policy import PolicyEngine
@@ -35,7 +35,7 @@ class ToolGateway:
         protection_enabled: bool,
         output_dir: Path,
         policy: PolicyEngine | None = None,
-        approvals: ApprovalManager | None = None,
+        approvals: ApprovalStore | None = None,
     ) -> None:
         self.registry = registry
         self.session_id = session_id
