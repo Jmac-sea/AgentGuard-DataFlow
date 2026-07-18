@@ -83,7 +83,7 @@ github.create_issue
 - Node构建与Nginx运行的前端Dockerfile。
 - Nginx `/api` 反向代理。
 - Docker Compose服务依赖与健康检查。
-- 当前开发机未安装Docker CLI，Compose YAML结构已验证，实际镜像构建待Docker环境验证。
+- 当前开发机未安装Docker CLI；API/Web镜像构建和Compose配置已在GitHub Actions验证通过。
 
 ### 持续集成
 
