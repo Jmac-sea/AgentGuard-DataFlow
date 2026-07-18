@@ -20,7 +20,7 @@ class MockEnvironment:
 @dataclass
 class RegisteredTool:
     spec: ToolSpec
-    handler: ToolHandler
+    handler: ToolHandler | None
 
 
 class ToolRegistry:
@@ -31,6 +31,11 @@ class ToolRegistry:
         if spec.name in self._tools:
             raise ValueError(f"Tool already registered: {spec.name}")
         self._tools[spec.name] = RegisteredTool(spec=spec, handler=handler)
+
+    def register_metadata(self, spec: ToolSpec) -> None:
+        if spec.name in self._tools:
+            raise ValueError(f"Tool already registered: {spec.name}")
+        self._tools[spec.name] = RegisteredTool(spec=spec, handler=None)
 
     def spec(self, name: str) -> ToolSpec:
         try:
@@ -43,6 +48,8 @@ class ToolRegistry:
             tool = self._tools[name]
         except KeyError as exc:
             raise KeyError(f"Unknown tool: {name}") from exc
+        if tool.handler is None:
+            raise RuntimeError(f"Tool has metadata only and cannot execute locally: {name}")
         return tool.handler(arguments)
 
 
@@ -96,7 +103,7 @@ def create_mock_registry(environment: MockEnvironment) -> ToolRegistry:
     return registry
 
 
-def create_mcp_metadata_registry() -> ToolRegistry:
+def create_mcp_metadata_registry(specs: list[ToolSpec] | None = None) -> ToolRegistry:
     """Create tool metadata for the real MCP gateway.
 
     Handlers are deliberately unusable because execution belongs to DownstreamManager.
@@ -104,25 +111,17 @@ def create_mcp_metadata_registry() -> ToolRegistry:
 
     registry = ToolRegistry()
 
-    def unavailable(_: dict[str, Any]) -> Any:
-        raise RuntimeError("Metadata-only tool must be executed through DownstreamManager")
-
-    registry.register(
+    configured_specs = specs or [
         ToolSpec(name="email.read", category=ToolCategory.READ, description="Read an email"),
-        unavailable,
-    )
-    registry.register(
         ToolSpec(
             name="filesystem.read", category=ToolCategory.READ, description="Read a local file"
         ),
-        unavailable,
-    )
-    registry.register(
         ToolSpec(
             name="github.create_issue",
             category=ToolCategory.EXTERNAL_WRITE,
             description="Create a public issue",
         ),
-        unavailable,
-    )
+    ]
+    for spec in configured_specs:
+        registry.register_metadata(spec)
     return registry

@@ -130,6 +130,13 @@ The repository contains both a fast in-process test adapter and a real stdio MCP
 gateway exposes namespaced tools and forwards allowed calls to independent mock Email,
 Filesystem, and GitHub MCP servers.
 
+Downstream MCP processes and their exposed tool names are declared in
+[`config/mcp-servers.yaml`](config/mcp-servers.yaml). At startup, the gateway discovers each
+server's actual tool schema, fails closed if a configured tool is missing, and does not expose
+unclassified tools. Commands, arguments, environments, and working directories support the
+`{python}` and `{project_root}` placeholders, and `AGENTGUARD_MCP_CONFIG` can select another
+configuration file.
+
 Product and engineering documents are available in [`agentguard-design/docs`](agentguard-design/docs/README.md).
 
 ## Safety boundary

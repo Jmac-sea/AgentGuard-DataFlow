@@ -7,7 +7,7 @@ from typing import Any, Self
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.types import TextContent
+from mcp.types import TextContent, Tool
 
 
 class MCPProcessClient:
@@ -39,8 +39,11 @@ class MCPProcessClient:
         self._session = None
 
     async def list_tools(self) -> list[str]:
+        return [tool.name for tool in await self.discover_tools()]
+
+    async def discover_tools(self) -> list[Tool]:
         result = await self._require_session().list_tools()
-        return [tool.name for tool in result.tools]
+        return result.tools
 
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
         result = await self._require_session().call_tool(name, arguments)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import logging
 import os
-import sys
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,48 +9,71 @@ from types import TracebackType
 from typing import Any, Self
 
 from mcp import StdioServerParameters
+from mcp.types import Tool
 
 from agentguard.mcp_runtime.client import MCPProcessClient
+from agentguard.mcp_runtime.config import MCPServersConfig
+from agentguard.models import ToolCategory, ToolSpec
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
 class DownstreamTool:
     server_id: str
     downstream_name: str
-
-
-TOOL_MAP: dict[str, DownstreamTool] = {
-    "email.read": DownstreamTool("email", "read"),
-    "filesystem.read": DownstreamTool("filesystem", "read"),
-    "github.create_issue": DownstreamTool("github", "create_issue"),
-}
+    category: ToolCategory
 
 
 class DownstreamManager:
-    def __init__(self, *, cwd: Path, env: dict[str, str] | None = None) -> None:
-        self.cwd = cwd
+    def __init__(
+        self,
+        *,
+        cwd: Path,
+        env: dict[str, str] | None = None,
+        config: MCPServersConfig | None = None,
+        config_path: Path | None = None,
+    ) -> None:
+        self.cwd = cwd.resolve()
         self.env = {**os.environ, **(env or {})}
+        self.config = config or MCPServersConfig.from_yaml(
+            config_path or self.cwd / "config" / "mcp-servers.yaml"
+        )
         self._stack: AsyncExitStack | None = None
         self._clients: dict[str, MCPProcessClient] = {}
+        self._tool_map: dict[str, DownstreamTool] = {}
+        self._exposed_tools: list[Tool] = []
+        self._tool_specs: list[ToolSpec] = []
+
+    @property
+    def exposed_tools(self) -> list[Tool]:
+        return list(self._exposed_tools)
+
+    @property
+    def tool_specs(self) -> list[ToolSpec]:
+        return list(self._tool_specs)
 
     async def __aenter__(self) -> Self:
         stack = AsyncExitStack()
-        modules = {
-            "email": "agentguard.mock_mcp.email_server",
-            "filesystem": "agentguard.mock_mcp.filesystem_server",
-            "github": "agentguard.mock_mcp.github_server",
-        }
-        clients: dict[str, MCPProcessClient] = {}
-        for server_id, module in modules.items():
-            parameters = StdioServerParameters(
-                command=sys.executable,
-                args=["-m", module],
-                env=self.env,
-                cwd=self.cwd,
-            )
-            clients[server_id] = await stack.enter_async_context(MCPProcessClient(parameters))
+        try:
+            clients: dict[str, MCPProcessClient] = {}
+            for server_config in self.config.servers:
+                parameters = StdioServerParameters(
+                    command=server_config.resolved_command(),
+                    args=server_config.resolved_args(self.cwd),
+                    env={**self.env, **server_config.resolved_env(self.cwd)},
+                    cwd=server_config.resolved_cwd(self.cwd),
+                )
+                clients[server_config.id] = await stack.enter_async_context(
+                    MCPProcessClient(parameters)
+                )
+            self._clients = clients
+            self._discover_and_validate(await self._discover(clients))
+        except BaseException:
+            await stack.aclose()
+            self._clients = {}
+            raise
         self._stack = stack
-        self._clients = clients
         return self
 
     async def __aexit__(
@@ -63,23 +86,87 @@ class DownstreamManager:
             await self._stack.aclose()
         self._stack = None
         self._clients = {}
+        self._tool_map = {}
+        self._exposed_tools = []
+        self._tool_specs = []
 
     async def call_tool(self, upstream_name: str, arguments: dict[str, Any]) -> Any:
         try:
-            target = TOOL_MAP[upstream_name]
+            target = self._tool_map[upstream_name]
             client = self._clients[target.server_id]
         except KeyError as exc:
             raise KeyError(f"Unknown downstream MCP tool: {upstream_name}") from exc
         return await client.call_tool(target.downstream_name, arguments)
 
     async def validate_tools(self) -> None:
-        expected = {
-            "email": {"read"},
-            "filesystem": {"read"},
-            "github": {"create_issue"},
-        }
-        for server_id, names in expected.items():
-            actual = set(await self._clients[server_id].list_tools())
-            missing = names - actual
+        """Compatibility hook; discovery now validates tools during startup."""
+        if not self._tool_map:
+            raise RuntimeError("Downstream MCP tools have not been discovered")
+
+    async def _discover(self, clients: dict[str, MCPProcessClient]) -> dict[str, list[Tool]]:
+        return {server_id: await client.discover_tools() for server_id, client in clients.items()}
+
+    def _discover_and_validate(self, discovered: dict[str, list[Tool]]) -> None:
+        tool_map: dict[str, DownstreamTool] = {}
+        exposed_tools: list[Tool] = []
+        specs: list[ToolSpec] = []
+        for server_config in self.config.servers:
+            actual = {tool.name: tool for tool in discovered[server_config.id]}
+            configured_names = set(server_config.tools)
+            missing = configured_names - set(actual)
             if missing:
-                raise RuntimeError(f"MCP server {server_id} is missing tools: {sorted(missing)}")
+                raise RuntimeError(
+                    f"MCP server {server_config.id} is missing configured tools: {sorted(missing)}"
+                )
+            additional = set(actual) - configured_names
+            if additional:
+                logger.warning(
+                    "MCP server %s has unconfigured tools that will not be exposed: %s",
+                    server_config.id,
+                    sorted(additional),
+                )
+            for downstream_name, tool_config in server_config.tools.items():
+                discovered_tool = actual[downstream_name]
+                description = tool_config.description or discovered_tool.description or ""
+                exposed_tool = discovered_tool.model_copy(
+                    update={
+                        "name": tool_config.expose_as,
+                        "description": description,
+                        "inputSchema": _gateway_schema(
+                            discovered_tool.inputSchema, tool_config.category
+                        ),
+                    }
+                )
+                tool_map[tool_config.expose_as] = DownstreamTool(
+                    server_id=server_config.id,
+                    downstream_name=downstream_name,
+                    category=tool_config.category,
+                )
+                exposed_tools.append(exposed_tool)
+                specs.append(
+                    ToolSpec(
+                        name=tool_config.expose_as,
+                        category=tool_config.category,
+                        description=description,
+                    )
+                )
+        self._tool_map = tool_map
+        self._exposed_tools = exposed_tools
+        self._tool_specs = specs
+
+
+def _gateway_schema(schema: dict[str, Any], category: ToolCategory) -> dict[str, Any]:
+    if category is not ToolCategory.EXTERNAL_WRITE:
+        return schema
+    gateway_schema = dict(schema)
+    properties = dict(gateway_schema.get("properties", {}))
+    properties.setdefault(
+        "approval_token",
+        {
+            "type": ["string", "null"],
+            "description": "One-time AgentGuard approval token for this exact tool call",
+            "default": None,
+        },
+    )
+    gateway_schema["properties"] = properties
+    return gateway_schema

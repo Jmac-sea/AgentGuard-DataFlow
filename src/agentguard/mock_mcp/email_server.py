@@ -16,5 +16,11 @@ def read_email(message_id: str) -> str:
     return os.getenv("AGENTGUARD_EMAIL_BODY", "Synthetic customer email")
 
 
+@server.tool(name="list_labels")
+def list_labels() -> list[str]:
+    """Return synthetic mailbox labels used to test the gateway allowlist."""
+    return ["inbox", "customer-support"]
+
+
 if __name__ == "__main__":
     server.run(transport="stdio")
