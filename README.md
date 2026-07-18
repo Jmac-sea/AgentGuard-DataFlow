@@ -61,6 +61,24 @@ GET  /api/v1/benchmarks/{run_id}
 GET  /api/v1/benchmarks/{run_id}/report
 ```
 
+## Web dashboard
+
+Start the API and frontend in separate terminals:
+
+```powershell
+uv run agentguard serve-api --runtime-dir runtime --policy policies/default.yaml
+```
+
+```powershell
+cd web
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. The first frontend slice includes the Data Lineage workspace,
+policy decision evidence, recent tool calls, and Benchmark results. If the API has no traces yet,
+the interface uses clearly labelled synthetic demo data.
+
 Runtime traces and reports are written under `runtime/` and never persist raw Canary values.
 
 ## Architecture

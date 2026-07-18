@@ -59,6 +59,16 @@ github.create_issue
 - JSON与Markdown报告。
 - Benchmark列表、运行、详情和报告API。
 
+### React前端
+
+- React 19 + TypeScript + Vite工程。
+- 深色安全可观测性设计系统。
+- 数据血缘图和Source→Artifact→Sink展示。
+- 泄漏阻断证据、工具调用与变形检测面板。
+- Benchmark结果表和防护对比条形图。
+- Trace、Lineage与Benchmark API接入。
+- API不可用时明确标记的合成演示数据。
+
 ## 当前验证结果
 
 ```text
@@ -66,6 +76,8 @@ Ruff: 通过
 Mypy strict: 通过
 Pytest: 32 passed
 Coverage: 89%
+Frontend build: passed
+Frontend tests: 1 passed
 ```
 
 端到端场景：
@@ -97,6 +109,8 @@ uv run agentguard mcp-demo --mode protected-split --project-root .
 uv run agentguard replay <trace.jsonl> --policy policies/default.yaml
 uv run agentguard serve-api --runtime-dir runtime --policy policies/default.yaml
 uv run agentguard benchmark --runs 10 --runtime-dir runtime-benchmark
+cd web
+npm run dev
 ```
 
 ## 与实施计划的对应关系
@@ -104,11 +118,11 @@ uv run agentguard benchmark --runs 10 --runtime-dir runtime-benchmark
 - M1透明代理：核心链路已完成；动态发现任意下游Server和配置文件仍待实现。
 - M2数据流追踪：原文、子串、Base64、Hex和多字段拆分重组已完成。
 - M3策略与回放：YAML策略、离线回放和人工审批已完成。
-- M4 API与前端：FastAPI和Benchmark第一阶段已完成；React前端待实现。
+- M4 API与前端：FastAPI、Benchmark和React数据血缘第一阶段已完成。
 
 ## 下一开发批次
 
-1. React工程、导航和设计系统。
-2. Trace列表与数据血缘页面。
-3. Benchmark结果页面。
-4. 策略、回放和审批页面。
+1. Trace选择器与事件详情抽屉。
+2. 策略、回放和审批页面。
+3. 前端端到端测试与Docker Compose。
+4. Benchmark真实MCP运行模式和性能指标。
