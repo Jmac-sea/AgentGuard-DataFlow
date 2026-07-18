@@ -66,7 +66,11 @@ def test_benchmark_api_runs_and_returns_markdown(tmp_path: Path) -> None:
 
     response = client.post(
         "/api/v1/benchmarks/run",
-        json={"runs": 1, "modes": ["normal", "baseline", "protected"]},
+        json={
+            "runs": 1,
+            "modes": ["normal", "baseline", "protected"],
+            "transport": "inprocess",
+        },
     )
     assert response.status_code == 200
     run_id = response.json()["run_id"]
@@ -75,4 +79,4 @@ def test_benchmark_api_runs_and_returns_markdown(tmp_path: Path) -> None:
     assert listed[0]["run_id"] == run_id
     report = client.get(f"/api/v1/benchmarks/{run_id}/report")
     assert report.status_code == 200
-    assert "| baseline | 100% | 100% |" in report.text
+    assert "| baseline | 100% | 100% | 0% |" in report.text

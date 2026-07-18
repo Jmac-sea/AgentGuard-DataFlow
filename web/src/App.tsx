@@ -19,25 +19,40 @@ export default function App() {
   const [selectedTrace, setSelectedTrace] = useState(demoLineage.trace_id);
   const [lineageLive, setLineageLive] = useState(false);
   const [benchmarkLive, setBenchmarkLive] = useState(false);
+  const [apiStatus, setApiStatus] = useState<"loading" | "live" | "offline">("loading");
 
   useEffect(() => {
-    void api.traces().then(async (availableTraces) => {
-      setTraces(availableTraces);
-      if (availableTraces.length) {
-        const traceId = availableTraces[0].trace_id;
-        const [nextLineage, detail] = await Promise.all([api.lineage(traceId), api.trace(traceId)]);
-        setSelectedTrace(traceId);
-        setLineage(nextLineage);
-        setEvents(detail.events);
-        setLineageLive(true);
+    const load = async () => {
+      let connected = false;
+      const [traceResult, benchmarkResult] = await Promise.allSettled([
+        api.traces(),
+        api.benchmarks(),
+      ]);
+      if (traceResult.status === "fulfilled") {
+        setTraces(traceResult.value);
+        connected = true;
+        if (traceResult.value.length) {
+          const traceId = traceResult.value[0].trace_id;
+          const [nextLineage, detail] = await Promise.all([
+            api.lineage(traceId),
+            api.trace(traceId),
+          ]);
+          setSelectedTrace(traceId);
+          setLineage(nextLineage);
+          setEvents(detail.events);
+          setLineageLive(true);
+        }
       }
-    }).catch(() => undefined);
-    void api.benchmarks().then((reports) => {
-      if (reports.length) {
-        setBenchmark(reports[0]);
-        setBenchmarkLive(true);
+      if (benchmarkResult.status === "fulfilled") {
+        connected = true;
+        if (benchmarkResult.value.length) {
+          setBenchmark(benchmarkResult.value[0]);
+          setBenchmarkLive(true);
+        }
       }
-    }).catch(() => undefined);
+      setApiStatus(connected ? "live" : "offline");
+    };
+    void load().catch(() => setApiStatus("offline"));
   }, []);
 
   const changeTrace = async (traceId: string) => {
@@ -61,7 +76,7 @@ export default function App() {
       <main>
         <header className="topbar">
           <button className="project-selector"><span>Support Agent / MCP Gateway</span><ChevronDown size={17} /></button>
-          <div className="gateway-status"><i />Gateway 已连接</div>
+          <div className={`gateway-status ${apiStatus}`}><i />{apiStatus === "loading" ? "正在连接 Gateway" : apiStatus === "live" ? "Gateway 已连接" : "离线演示模式"}</div>
         </header>
         <div className="content">
           {content}

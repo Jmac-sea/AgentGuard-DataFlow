@@ -52,6 +52,20 @@ Run a deterministic benchmark and generate JSON plus Markdown reports:
 uv run agentguard benchmark --runs 10 --runtime-dir runtime-benchmark
 ```
 
+Run a benchmark through the real stdio MCP process chain:
+
+```powershell
+uv run agentguard benchmark `
+  --transport mcp `
+  --runs 1 `
+  --mode protected `
+  --project-root . `
+  --runtime-dir runtime-benchmark
+```
+
+Reports include average, P50, and P95 scenario duration. MCP runs are capped at 10 repetitions per
+mode because they create real subprocess chains.
+
 Benchmark API endpoints:
 
 ```text
@@ -90,6 +104,11 @@ docker compose up --build
 
 Open `http://127.0.0.1:5173`. The frontend proxies `/api` to the backend container, while runtime
 traces remain under the local `runtime/` directory.
+
+## Continuous integration
+
+GitHub Actions runs backend linting, strict typing and tests, frontend build/tests, both Docker
+image builds, and Docker Compose configuration validation.
 
 Runtime traces and reports are written under `runtime/` and never persist raw Canary values.
 

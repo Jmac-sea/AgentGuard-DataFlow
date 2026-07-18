@@ -97,3 +97,4 @@ class ScenarioReport(BaseModel):
     blocked_calls: int
     matched_rules: list[str]
     trace_path: str
+    duration_ms: float = 0.0

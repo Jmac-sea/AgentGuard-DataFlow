@@ -94,12 +94,25 @@ def benchmark(
         list[str] | None,
         typer.Option(help="Modes to include; repeat the option for multiple modes"),
     ] = None,
+    transport: Annotated[str, typer.Option(help="Benchmark transport: inprocess or mcp")] = (
+        "inprocess"
+    ),
+    project_root: Annotated[Path, typer.Option(help="AgentGuard repository root")] = (
+        DEFAULT_PROJECT_ROOT
+    ),
     runtime_dir: Annotated[Path, typer.Option(help="Benchmark output directory")] = (
         DEFAULT_BENCHMARK_RUNTIME_DIR
     ),
 ) -> None:
     """Run deterministic security scenarios and aggregate metrics."""
-    report = BenchmarkRunner(runtime_dir).run(runs=runs, modes=modes or DEFAULT_MODES)
+    runner = BenchmarkRunner(runtime_dir, project_root=project_root)
+    selected_modes = modes or DEFAULT_MODES
+    if transport == "mcp":
+        report = asyncio.run(runner.run_mcp(runs=runs, modes=selected_modes))
+    elif transport == "inprocess":
+        report = runner.run(runs=runs, modes=selected_modes)
+    else:
+        raise typer.BadParameter("transport must be inprocess or mcp")
     typer.echo(json.dumps(report.model_dump(mode="json"), indent=2))
 
 

@@ -46,6 +46,9 @@ export const demoBenchmark: Benchmark = {
       issue_creation_rate: 1,
       blocking_rate: 0,
       normal_task_completion_rate: 1,
+      average_duration_ms: 2.4,
+      p50_duration_ms: 2.3,
+      p95_duration_ms: 2.8,
     },
     {
       mode: "baseline",
@@ -55,6 +58,9 @@ export const demoBenchmark: Benchmark = {
       issue_creation_rate: 1,
       blocking_rate: 0,
       normal_task_completion_rate: 1,
+      average_duration_ms: 3.1,
+      p50_duration_ms: 3.0,
+      p95_duration_ms: 3.6,
     },
     {
       mode: "protected",
@@ -64,6 +70,9 @@ export const demoBenchmark: Benchmark = {
       issue_creation_rate: 0,
       blocking_rate: 1,
       normal_task_completion_rate: 1,
+      average_duration_ms: 2.9,
+      p50_duration_ms: 2.8,
+      p95_duration_ms: 3.4,
     },
     {
       mode: "protected-base64",
@@ -73,6 +82,9 @@ export const demoBenchmark: Benchmark = {
       issue_creation_rate: 0,
       blocking_rate: 1,
       normal_task_completion_rate: 1,
+      average_duration_ms: 3.3,
+      p50_duration_ms: 3.2,
+      p95_duration_ms: 3.9,
     },
     {
       mode: "protected-split",
@@ -82,7 +94,9 @@ export const demoBenchmark: Benchmark = {
       issue_creation_rate: 0,
       blocking_rate: 1,
       normal_task_completion_rate: 1,
+      average_duration_ms: 3.5,
+      p50_duration_ms: 3.4,
+      p95_duration_ms: 4.1,
     },
   ],
 };
-

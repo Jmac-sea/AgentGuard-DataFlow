@@ -19,6 +19,8 @@ main { min-width: 0; }
 .project-selector { min-width: 330px; padding: 13px 16px; display: flex; justify-content: space-between; color: #e6eef9; border: 1px solid #29405d; border-radius: 9px; background: #0b1728; }
 .gateway-status { color: #55e5ad; border: 1px solid #1f7b61; background: rgba(17, 74, 59, .25); border-radius: 9px; padding: 10px 15px; font-weight: 700; }
 .gateway-status i { display: inline-block; width: 9px; height: 9px; margin-right: 9px; border-radius: 50%; background: #43e3a4; box-shadow: 0 0 12px #43e3a4; }
+.gateway-status.loading { color: #f1b45d; border-color: #805a29; background: rgba(90, 61, 20, .22); }.gateway-status.loading i { background: #f1b45d; box-shadow: 0 0 10px #f1b45d; animation: pulse 1s infinite alternate; }.gateway-status.offline { color: #ff8089; border-color: #8d3842; background: rgba(104, 28, 38, .22); }.gateway-status.offline i { background: #ef5965; box-shadow: none; }
+@keyframes pulse { to { opacity: .35; } }
 .content { padding: 20px 24px 30px; }
 .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; }
 .metric-card { min-height: 116px; padding: 22px 26px; border: 1px solid #233a56; border-radius: 10px; background: linear-gradient(145deg, #0d1b2e, #091522); display: flex; align-items: center; justify-content: space-between; }

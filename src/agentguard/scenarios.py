@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from pathlib import Path
+from time import perf_counter
 from uuid import uuid4
 
 from agentguard.gateway import ToolBlockedError, ToolGateway
@@ -22,6 +23,7 @@ class ScenarioRunner:
         self.runtime_dir = runtime_dir or Path("runtime")
 
     def run(self, mode: str) -> ScenarioReport:
+        started_at = perf_counter()
         if mode not in {
             "normal",
             "baseline",
@@ -89,6 +91,7 @@ class ScenarioRunner:
             blocked_calls=gateway.blocked_calls,
             matched_rules=gateway.matched_rules,
             trace_path=str(gateway.trace.path),
+            duration_ms=(perf_counter() - started_at) * 1000,
         )
         report_dir = self.runtime_dir / "reports"
         report_dir.mkdir(parents=True, exist_ok=True)

@@ -5,6 +5,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from time import perf_counter
 from uuid import uuid4
 
 from mcp import StdioServerParameters
@@ -22,6 +23,7 @@ class MCPScenarioRunner:
         self.runtime_dir = (runtime_dir or self.project_root / "runtime-mcp").resolve()
 
     async def run(self, mode: str) -> ScenarioReport:
+        started_at = perf_counter()
         if mode not in {
             "normal",
             "baseline",
@@ -102,6 +104,7 @@ class MCPScenarioRunner:
             blocked_calls=blocked_calls,
             matched_rules=["block_secret_to_external"] if malicious else [],
             trace_path=str(self.runtime_dir / "traces" / f"{trace_id}.jsonl"),
+            duration_ms=(perf_counter() - started_at) * 1000,
         )
 
     @staticmethod

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,7 @@ class ReplayRequest(BaseModel):
 class BenchmarkRunRequest(BaseModel):
     runs: int = 5
     modes: list[str] = Field(default_factory=lambda: list(DEFAULT_MODES))
+    transport: str = "inprocess"
 
 
 class TraceStore:
@@ -218,7 +220,13 @@ def create_app(
     @app.post("/api/v1/benchmarks/run")
     def run_benchmark(request: BenchmarkRunRequest) -> dict[str, Any]:
         try:
-            report = BenchmarkRunner(runtime_dir).run(runs=request.runs, modes=request.modes)
+            runner = BenchmarkRunner(runtime_dir)
+            if request.transport == "mcp":
+                report = asyncio.run(runner.run_mcp(runs=request.runs, modes=request.modes))
+            elif request.transport == "inprocess":
+                report = runner.run(runs=request.runs, modes=request.modes)
+            else:
+                raise ValueError("transport must be inprocess or mcp")
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return report.model_dump(mode="json")

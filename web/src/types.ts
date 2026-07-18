@@ -36,12 +36,16 @@ export type BenchmarkMetric = {
   issue_creation_rate: number;
   blocking_rate: number;
   normal_task_completion_rate: number;
+  average_duration_ms: number;
+  p50_duration_ms: number;
+  p95_duration_ms: number;
 };
 
 export type Benchmark = {
   run_id: string;
   created_at: string;
   runs_per_mode: number;
+  transport?: string;
   metrics: BenchmarkMetric[];
 };
 

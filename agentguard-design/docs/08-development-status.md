@@ -60,6 +60,8 @@ github.create_issue
 - Attack Success、Secret Leak、Issue Creation、Blocking和Task Completion指标。
 - JSON与Markdown报告。
 - Benchmark列表、运行、详情和报告API。
+- In-process与真实stdio MCP两种Benchmark transport。
+- Average、P50和P95场景耗时指标。
 
 ### React前端
 
@@ -83,12 +85,19 @@ github.create_issue
 - Docker Compose服务依赖与健康检查。
 - 当前开发机未安装Docker CLI，Compose YAML结构已验证，实际镜像构建待Docker环境验证。
 
+### 持续集成
+
+- GitHub Actions后端Ruff、Mypy和Pytest。
+- 前端npm构建和Vitest。
+- API与Web Docker镜像构建。
+- Docker Compose配置验证。
+
 ## 当前验证结果
 
 ```text
 Ruff: 通过
 Mypy strict: 通过
-Pytest: 33 passed
+Pytest: 34 passed
 Coverage: 88%
 Frontend build: passed
 Frontend tests: 2 passed
@@ -136,7 +145,7 @@ npm run dev
 
 ## 下一开发批次
 
-1. 前端端到端测试和错误/加载状态。
-2. Benchmark真实MCP运行模式和性能指标。
-3. SQLite持久化Approval和多进程共享。
-4. 在有Docker环境的CI中验证镜像构建。
+1. 前端浏览器端到端测试。
+2. Gateway调用级延迟与资源使用指标。
+3. 动态下游MCP配置和工具发现。
+4. 根据GitHub Actions结果修复跨平台问题。

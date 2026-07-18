@@ -157,7 +157,8 @@ Benchmark运行请求：
 ```json
 {
   "runs": 10,
-  "modes": ["normal", "baseline", "protected", "protected-base64", "protected-split"]
+  "modes": ["normal", "baseline", "protected", "protected-base64", "protected-split"],
+  "transport": "inprocess"
 }
 ```
 
