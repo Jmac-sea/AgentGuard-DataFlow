@@ -25,6 +25,14 @@ class DownstreamTool:
     category: ToolCategory
 
 
+@dataclass(frozen=True)
+class ServerDiscoveryReport:
+    server_id: str
+    discovered_tools: list[str]
+    exposed_tools: list[str]
+    hidden_tools: list[str]
+
+
 class DownstreamManager:
     def __init__(
         self,
@@ -44,6 +52,7 @@ class DownstreamManager:
         self._tool_map: dict[str, DownstreamTool] = {}
         self._exposed_tools: list[Tool] = []
         self._tool_specs: list[ToolSpec] = []
+        self._discovery_reports: list[ServerDiscoveryReport] = []
 
     @property
     def exposed_tools(self) -> list[Tool]:
@@ -52,6 +61,10 @@ class DownstreamManager:
     @property
     def tool_specs(self) -> list[ToolSpec]:
         return list(self._tool_specs)
+
+    @property
+    def discovery_reports(self) -> list[ServerDiscoveryReport]:
+        return list(self._discovery_reports)
 
     async def __aenter__(self) -> Self:
         stack = AsyncExitStack()
@@ -89,6 +102,7 @@ class DownstreamManager:
         self._tool_map = {}
         self._exposed_tools = []
         self._tool_specs = []
+        self._discovery_reports = []
 
     async def call_tool(self, upstream_name: str, arguments: dict[str, Any]) -> Any:
         try:
@@ -110,6 +124,7 @@ class DownstreamManager:
         tool_map: dict[str, DownstreamTool] = {}
         exposed_tools: list[Tool] = []
         specs: list[ToolSpec] = []
+        reports: list[ServerDiscoveryReport] = []
         for server_config in self.config.servers:
             actual = {tool.name: tool for tool in discovered[server_config.id]}
             configured_names = set(server_config.tools)
@@ -125,6 +140,14 @@ class DownstreamManager:
                     server_config.id,
                     sorted(additional),
                 )
+            reports.append(
+                ServerDiscoveryReport(
+                    server_id=server_config.id,
+                    discovered_tools=sorted(actual),
+                    exposed_tools=sorted(tool.expose_as for tool in server_config.tools.values()),
+                    hidden_tools=sorted(additional),
+                )
+            )
             for downstream_name, tool_config in server_config.tools.items():
                 discovered_tool = actual[downstream_name]
                 description = tool_config.description or discovered_tool.description or ""
@@ -153,6 +176,7 @@ class DownstreamManager:
         self._tool_map = tool_map
         self._exposed_tools = exposed_tools
         self._tool_specs = specs
+        self._discovery_reports = reports
 
 
 def _gateway_schema(schema: dict[str, Any], category: ToolCategory) -> dict[str, Any]:

@@ -100,3 +100,62 @@ export type Approval = {
   expires_at: string | null;
   token?: string;
 };
+
+export type PlaygroundScenario = {
+  mode: string;
+  title: string;
+  description: string;
+  protection_enabled: boolean;
+  attack_variant: string;
+};
+
+export type PlaygroundStep = {
+  tool: string;
+  action: string;
+  decision: "ALLOW" | "DENY";
+};
+
+export type ScenarioReport = {
+  scenario: string;
+  mode: string;
+  trace_id: string;
+  normal_task_completed: boolean;
+  attack_succeeded: boolean;
+  secret_leaked: boolean;
+  issue_created: boolean;
+  blocked_calls: number;
+  matched_rules: string[];
+  trace_path: string;
+  duration_ms: number;
+};
+
+export type PlaygroundRun = {
+  simulator: string;
+  scenario: PlaygroundScenario;
+  report: ScenarioReport;
+  steps: PlaygroundStep[];
+};
+
+export type MCPToolConnection = {
+  downstream_name: string;
+  expose_as: string;
+  category: string;
+  description: string | null;
+};
+
+export type MCPServerConnection = {
+  id: string;
+  command: string;
+  status: "configured" | "healthy" | "error";
+  tools: MCPToolConnection[];
+  discovered_tools?: string[];
+  hidden_tools?: string[];
+};
+
+export type MCPRegistry = {
+  config_path: string;
+  status: "configured" | "healthy" | "error";
+  last_checked_at: string | null;
+  duration_ms?: number;
+  servers: MCPServerConnection[];
+};

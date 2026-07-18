@@ -2,6 +2,9 @@ import type {
   Approval,
   Benchmark,
   Lineage,
+  MCPRegistry,
+  PlaygroundRun,
+  PlaygroundScenario,
   PolicyDocument,
   ReplayReport,
   TraceDetail,
@@ -47,4 +50,11 @@ export const api = {
     sendJson<Approval>(`/api/v1/approvals/${approvalId}/approve`, "POST"),
   reject: (approvalId: string) =>
     sendJson<Approval>(`/api/v1/approvals/${approvalId}/reject`, "POST"),
+  playgroundScenarios: () =>
+    getJson<PlaygroundScenario[]>("/api/v1/playground/scenarios"),
+  runPlayground: (mode: string) =>
+    sendJson<PlaygroundRun>("/api/v1/playground/runs", "POST", { mode }),
+  mcpServers: () => getJson<MCPRegistry>("/api/v1/mcp/servers"),
+  discoverMcpServers: () =>
+    sendJson<MCPRegistry>("/api/v1/mcp/servers/discover", "POST"),
 };

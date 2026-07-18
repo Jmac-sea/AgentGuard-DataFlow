@@ -11,6 +11,11 @@ from pydantic import BaseModel, Field
 
 from agentguard.approval import ApprovalStatus, ApprovalStore, SQLiteApprovalManager
 from agentguard.benchmark import DEFAULT_MODES, BenchmarkRunner, BenchmarkStore
+from agentguard.control_plane import (
+    PLAYGROUND_SCENARIOS,
+    MCPRegistryService,
+    PlaygroundService,
+)
 from agentguard.policy import PolicyDocument, PolicyEngine
 from agentguard.replay import ReplayEngine
 
@@ -28,6 +33,10 @@ class BenchmarkRunRequest(BaseModel):
     runs: int = 5
     modes: list[str] = Field(default_factory=lambda: list(DEFAULT_MODES))
     transport: str = "inprocess"
+
+
+class PlaygroundRunRequest(BaseModel):
+    mode: str = "protected"
 
 
 class TraceStore:
@@ -119,11 +128,19 @@ def create_app(
     runtime_dir: Path = Path("runtime"),
     policy_path: Path = Path("policies/default.yaml"),
     approvals: ApprovalStore | None = None,
+    project_root: Path | None = None,
+    mcp_config_path: Path | None = None,
 ) -> FastAPI:
     app = FastAPI(title="AgentGuard DataFlow API", version="0.1.0")
     store = TraceStore(runtime_dir)
     approval_manager = approvals or SQLiteApprovalManager(runtime_dir / "approvals.db")
     benchmark_store = BenchmarkStore(runtime_dir)
+    resolved_root = (project_root or Path.cwd()).resolve()
+    playground = PlaygroundService(resolved_root, runtime_dir)
+    mcp_registry = MCPRegistryService(
+        resolved_root,
+        mcp_config_path or resolved_root / "config" / "mcp-servers.yaml",
+    )
 
     @app.get("/api/v1/health")
     def health() -> dict[str, str]:
@@ -136,6 +153,31 @@ def create_app(
             "trace_count": len(traces),
             "blocked_trace_count": sum(bool(trace["blocked"]) for trace in traces),
         }
+
+    @app.get("/api/v1/playground/scenarios")
+    def playground_scenarios() -> list[dict[str, Any]]:
+        return [scenario.model_dump(mode="json") for scenario in PLAYGROUND_SCENARIOS]
+
+    @app.post("/api/v1/playground/runs")
+    async def run_playground(request: PlaygroundRunRequest) -> dict[str, Any]:
+        try:
+            return await playground.run(request.mode)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/v1/mcp/servers")
+    def mcp_servers() -> dict[str, Any]:
+        try:
+            return mcp_registry.configured()
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post("/api/v1/mcp/servers/discover")
+    async def discover_mcp_servers() -> dict[str, Any]:
+        try:
+            return await mcp_registry.discover()
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     @app.get("/api/v1/traces")
     def list_traces() -> list[dict[str, Any]]:

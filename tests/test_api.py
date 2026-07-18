@@ -80,3 +80,56 @@ def test_benchmark_api_runs_and_returns_markdown(tmp_path: Path) -> None:
     report = client.get(f"/api/v1/benchmarks/{run_id}/report")
     assert report.status_code == 200
     assert "| baseline | 100% | 100% | 0% |" in report.text
+
+
+def test_control_plane_lists_playground_scenarios_and_mcp_servers(tmp_path: Path) -> None:
+    client = TestClient(
+        create_app(
+            runtime_dir=tmp_path,
+            project_root=Path.cwd(),
+            policy_path=Path("policies/default.yaml"),
+        )
+    )
+
+    scenarios = client.get("/api/v1/playground/scenarios").json()
+    assert {scenario["mode"] for scenario in scenarios} == {
+        "normal",
+        "baseline",
+        "protected",
+        "protected-base64",
+        "protected-split",
+    }
+
+    registry = client.get("/api/v1/mcp/servers").json()
+    assert registry["status"] == "configured"
+    assert [server["id"] for server in registry["servers"]] == [
+        "email",
+        "filesystem",
+        "github",
+    ]
+    assert registry["servers"][2]["tools"][0]["category"] == "external_write"
+
+
+def test_control_plane_discovers_tools_and_runs_protected_playground(tmp_path: Path) -> None:
+    client = TestClient(
+        create_app(
+            runtime_dir=tmp_path,
+            project_root=Path.cwd(),
+            policy_path=Path("policies/default.yaml"),
+        )
+    )
+
+    discovery = client.post("/api/v1/mcp/servers/discover")
+    assert discovery.status_code == 200
+    email = discovery.json()["servers"][0]
+    assert email["status"] == "healthy"
+    assert email["hidden_tools"] == ["list_labels"]
+
+    response = client.post("/api/v1/playground/runs", json={"mode": "protected"})
+    assert response.status_code == 200
+    result = response.json()
+    assert result["simulator"] == "deterministic-mcp-agent"
+    assert result["report"]["attack_succeeded"] is False
+    assert result["report"]["blocked_calls"] == 1
+    assert result["steps"][-1]["decision"] == "DENY"
+    assert Path(result["report"]["trace_path"]).exists()

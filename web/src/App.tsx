@@ -6,12 +6,14 @@ import { demoBenchmark, demoLineage } from "./demo";
 import { BenchmarkPage } from "./pages/BenchmarkPage";
 import { ApprovalPage } from "./pages/ApprovalPage";
 import { LineagePage } from "./pages/LineagePage";
+import { MCPConnectionsPage } from "./pages/MCPConnectionsPage";
+import { PlaygroundPage } from "./pages/PlaygroundPage";
 import { PolicyPage } from "./pages/PolicyPage";
 import { ReplayPage } from "./pages/ReplayPage";
 import type { Benchmark, Lineage, TraceEvent, TraceSummary } from "./types";
 
 export default function App() {
-  const [page, setPage] = useState<Page>("lineage");
+  const [page, setPage] = useState<Page>("playground");
   const [lineage, setLineage] = useState<Lineage>(demoLineage);
   const [benchmark, setBenchmark] = useState<Benchmark>(demoBenchmark);
   const [traces, setTraces] = useState<TraceSummary[]>([]);
@@ -62,7 +64,16 @@ export default function App() {
     setEvents(detail.events);
   };
 
+  const openTrace = async (traceId: string) => {
+    setTraces(await api.traces());
+    await changeTrace(traceId);
+    setLineageLive(true);
+    setPage("lineage");
+  };
+
   const content = (() => {
+    if (page === "playground") return <PlaygroundPage onOpenTrace={(traceId) => void openTrace(traceId)} />;
+    if (page === "connections") return <MCPConnectionsPage />;
     if (page === "lineage") return <LineagePage lineage={lineage} live={lineageLive} traces={traces} selectedTrace={selectedTrace} onTraceChange={(traceId) => void changeTrace(traceId)} events={events} />;
     if (page === "benchmark") return <BenchmarkPage benchmark={benchmark} live={benchmarkLive} />;
     if (page === "policy") return <PolicyPage />;

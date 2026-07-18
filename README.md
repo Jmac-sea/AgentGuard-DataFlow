@@ -96,6 +96,28 @@ the interface uses clearly labelled synthetic demo data.
 The interface also includes Trace selection and event inspection, YAML policy validation, offline
 Replay, and Approval management.
 
+## Control Plane playground
+
+The web application now starts on an Agent Playground. Choose one of the normal, baseline,
+protected, Base64, or split-field scenarios and click **Run security scenario**. The API launches
+the real stdio MCP process chain, returns each simulated Agent step, and writes a trace directly to
+the active `runtime/` directory. The result links to the corresponding Data Lineage graph, so the
+complete demo no longer requires a separate terminal command.
+
+The **MCP Connections** page reads [`config/mcp-servers.yaml`](config/mcp-servers.yaml) and shows
+every configured downstream server, exposed tool name, and security category. **Check all
+connections** starts the downstream processes, performs real tool discovery, and reports tools
+that AgentGuard deliberately hides because they have not been classified.
+
+Control Plane endpoints:
+
+```text
+GET  /api/v1/playground/scenarios
+POST /api/v1/playground/runs
+GET  /api/v1/mcp/servers
+POST /api/v1/mcp/servers/discover
+```
+
 ## Docker Compose
 
 ```powershell
