@@ -10,6 +10,13 @@ import uvicorn
 
 from agentguard.api import create_app
 from agentguard.benchmark import DEFAULT_MODES, BenchmarkRunner
+from agentguard.mcp_runtime.gateway_runtime import GatewaySettings
+from agentguard.mcp_runtime.http_gateway import (
+    DEFAULT_ALLOWED_HOSTS,
+    DEFAULT_ALLOWED_ORIGINS,
+    create_http_gateway_app,
+    validate_remote_binding,
+)
 from agentguard.mcp_scenarios import MCPScenarioRunner
 from agentguard.policy import PolicyEngine
 from agentguard.replay import ReplayEngine
@@ -85,6 +92,61 @@ def serve_api(
 ) -> None:
     """Serve Trace, Lineage, Policy, Replay, and Approval APIs."""
     uvicorn.run(create_app(runtime_dir=runtime_dir, policy_path=policy), host=host, port=port)
+
+
+@app.command(name="serve-mcp-http")
+def serve_mcp_http(
+    host: Annotated[str, typer.Option(help="MCP HTTP bind host")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="MCP HTTP bind port")] = 8100,
+    project_root: Annotated[Path, typer.Option(help="AgentGuard repository root")] = (
+        DEFAULT_PROJECT_ROOT
+    ),
+    runtime_dir: Annotated[Path, typer.Option(help="Trace runtime directory")] = (
+        DEFAULT_RUNTIME_DIR
+    ),
+    policy: Annotated[Path, typer.Option(help="Active YAML policy")] = DEFAULT_POLICY_PATH,
+    mcp_config: Annotated[Path, typer.Option(help="Downstream MCP server configuration")] = Path(
+        "config/mcp-servers.yaml"
+    ),
+    token: Annotated[
+        str | None,
+        typer.Option(
+            help="Bearer token; also read from AGENTGUARD_HTTP_TOKEN",
+            envvar="AGENTGUARD_HTTP_TOKEN",
+        ),
+    ] = None,
+    allowed_host: Annotated[
+        list[str] | None,
+        typer.Option(help="Allowed HTTP Host value; repeat for multiple values"),
+    ] = None,
+    allowed_origin: Annotated[
+        list[str] | None,
+        typer.Option(help="Allowed Origin value; repeat for multiple values"),
+    ] = None,
+    protection: Annotated[bool, typer.Option(help="Enable AgentGuard blocking decisions")] = True,
+) -> None:
+    """Serve AgentGuard as a remote Streamable HTTP MCP gateway."""
+    try:
+        validate_remote_binding(host, token)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    root = project_root.resolve()
+    settings = GatewaySettings(
+        project_root=root,
+        runtime_dir=(root / runtime_dir).resolve()
+        if not runtime_dir.is_absolute()
+        else runtime_dir,
+        policy_path=(root / policy).resolve() if not policy.is_absolute() else policy,
+        config_path=(root / mcp_config).resolve() if not mcp_config.is_absolute() else mcp_config,
+        protection_enabled=protection,
+    )
+    http_app = create_http_gateway_app(
+        settings,
+        token=token,
+        allowed_hosts=allowed_host or DEFAULT_ALLOWED_HOSTS,
+        allowed_origins=allowed_origin or DEFAULT_ALLOWED_ORIGINS,
+    )
+    uvicorn.run(http_app, host=host, port=port)
 
 
 @app.command()

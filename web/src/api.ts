@@ -5,6 +5,7 @@ import type {
   MCPRegistry,
   PlaygroundRun,
   PlaygroundScenario,
+  RemoteGateway,
   PolicyDocument,
   ReplayReport,
   TraceDetail,
@@ -57,4 +58,5 @@ export const api = {
   mcpServers: () => getJson<MCPRegistry>("/api/v1/mcp/servers"),
   discoverMcpServers: () =>
     sendJson<MCPRegistry>("/api/v1/mcp/servers/discover", "POST"),
+  remoteGateway: () => getJson<RemoteGateway>("/api/v1/gateway/remote"),
 };

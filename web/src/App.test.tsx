@@ -27,6 +27,29 @@ test("navigates to the MCP connection registry", () => {
   expect(screen.getByRole("heading", { name: "MCP 接入中心" })).toBeInTheDocument();
 });
 
+test("shows the remote Streamable HTTP gateway status", async () => {
+  vi.spyOn(api, "mcpServers").mockResolvedValueOnce({
+    config_path: "config/mcp-servers.yaml",
+    status: "configured",
+    last_checked_at: null,
+    servers: [],
+  });
+  vi.spyOn(api, "remoteGateway").mockResolvedValueOnce({
+    status: "online",
+    transport: "streamable-http",
+    endpoint: "http://127.0.0.1:8100/mcp",
+    health_endpoint: "http://127.0.0.1:8100/health",
+    authentication: "bearer",
+  });
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "MCP 接入中心" }));
+
+  expect(await screen.findByText("http://127.0.0.1:8100/mcp")).toBeInTheDocument();
+  expect(screen.getByText("ONLINE")).toBeInTheDocument();
+  vi.restoreAllMocks();
+});
+
 test("runs a protected scenario from the playground", async () => {
   vi.spyOn(api, "runPlayground").mockResolvedValueOnce({
     simulator: "deterministic-mcp-agent",

@@ -133,3 +133,19 @@ def test_control_plane_discovers_tools_and_runs_protected_playground(tmp_path: P
     assert result["report"]["blocked_calls"] == 1
     assert result["steps"][-1]["decision"] == "DENY"
     assert Path(result["report"]["trace_path"]).exists()
+
+
+def test_remote_gateway_status_reports_offline_endpoint(tmp_path: Path) -> None:
+    client = TestClient(
+        create_app(
+            runtime_dir=tmp_path,
+            project_root=Path.cwd(),
+            remote_mcp_url="http://127.0.0.1:9/mcp",
+            remote_mcp_health_url="http://127.0.0.1:9/health",
+        )
+    )
+
+    result = client.get("/api/v1/gateway/remote").json()
+    assert result["status"] == "offline"
+    assert result["transport"] == "streamable-http"
+    assert result["endpoint"] == "http://127.0.0.1:9/mcp"

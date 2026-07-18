@@ -159,3 +159,11 @@ export type MCPRegistry = {
   duration_ms?: number;
   servers: MCPServerConnection[];
 };
+
+export type RemoteGateway = {
+  status: "online" | "offline" | "degraded";
+  transport: "streamable-http";
+  endpoint: string;
+  health_endpoint: string;
+  authentication: string;
+};

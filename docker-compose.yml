@@ -1,4 +1,46 @@
 services:
+  mcp-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - uv
+      - run
+      - agentguard
+      - serve-mcp-http
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8100"
+      - --project-root
+      - /app
+      - --runtime-dir
+      - /data/runtime
+      - --allowed-host
+      - localhost:*
+      - --allowed-host
+      - 127.0.0.1:*
+      - --allowed-host
+      - mcp-gateway:*
+    environment:
+      AGENTGUARD_HTTP_TOKEN: ${AGENTGUARD_HTTP_TOKEN:-change-me-before-remote-use}
+    volumes:
+      - ./runtime:/data/runtime
+      - ./policies:/app/policies:ro
+    ports:
+      - "8100:8100"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/health')",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   api:
     build:
       context: .
@@ -6,6 +48,9 @@ services:
     volumes:
       - ./runtime:/data/runtime
       - ./policies:/app/policies:ro
+    environment:
+      AGENTGUARD_REMOTE_MCP_URL: http://localhost:8100/mcp
+      AGENTGUARD_REMOTE_MCP_HEALTH_URL: http://mcp-gateway:8100/health
     ports:
       - "8000:8000"
     healthcheck:
@@ -29,4 +74,3 @@ services:
         condition: service_healthy
     ports:
       - "5173:80"
-

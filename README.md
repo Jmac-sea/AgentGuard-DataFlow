@@ -116,7 +116,65 @@ GET  /api/v1/playground/scenarios
 POST /api/v1/playground/runs
 GET  /api/v1/mcp/servers
 POST /api/v1/mcp/servers/discover
+GET  /api/v1/gateway/remote
 ```
+
+## Remote Streamable HTTP MCP gateway
+
+Start a stateful remote MCP endpoint on localhost. Use an environment variable instead of a
+command-line argument so the bearer token is not exposed in process listings:
+
+```powershell
+$env:AGENTGUARD_HTTP_TOKEN = "replace-with-a-long-random-token"
+uv run agentguard serve-mcp-http `
+  --host 127.0.0.1 `
+  --port 8100 `
+  --project-root . `
+  --runtime-dir runtime
+```
+
+Endpoints:
+
+```text
+MCP     http://127.0.0.1:8100/mcp
+Health  http://127.0.0.1:8100/health
+```
+
+A typical Streamable HTTP MCP client entry is:
+
+```json
+{
+  "mcpServers": {
+    "agentguard": {
+      "type": "streamable-http",
+      "url": "http://127.0.0.1:8100/mcp",
+      "headers": {
+        "Authorization": "Bearer replace-with-a-long-random-token"
+      }
+    }
+  }
+}
+```
+
+Client configuration field names vary, so some MCP hosts use `type: "http"` for the same
+transport. Each stateful client session receives its own AgentGuard session id, Trace id,
+in-memory provenance registry, and downstream MCP process chain. Approval tokens remain shared
+through SQLite but are still scoped to the originating Agent session and exact arguments.
+
+Binding beyond localhost requires a bearer token and explicit `--allowed-host` values. DNS
+rebinding protection is enabled by default. For example:
+
+```powershell
+$env:AGENTGUARD_HTTP_TOKEN = "replace-with-a-long-random-token"
+uv run agentguard serve-mcp-http `
+  --host 0.0.0.0 `
+  --allowed-host "agentguard.example.com:*" `
+  --allowed-origin "https://agent.example.com:*"
+```
+
+Docker Compose also starts the remote gateway on port `8100`. Set
+`AGENTGUARD_HTTP_TOKEN` before deployment; the Compose fallback is intended only for local
+development.
 
 ## Docker Compose
 

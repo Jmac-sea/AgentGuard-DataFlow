@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, PlugZap, RefreshCw, ShieldQuestion } from "lucide-react";
 import { api } from "../api";
-import type { MCPRegistry } from "../types";
+import type { MCPRegistry, RemoteGateway } from "../types";
 
 export function MCPConnectionsPage() {
   const [registry, setRegistry] = useState<MCPRegistry | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [remoteGateway, setRemoteGateway] = useState<RemoteGateway | null>(null);
 
-  useEffect(() => { void api.mcpServers().then(setRegistry).catch(() => setError("无法读取 MCP 配置")); }, []);
+  useEffect(() => {
+    void Promise.all([api.mcpServers(), api.remoteGateway()])
+      .then(([nextRegistry, gateway]) => { setRegistry(nextRegistry); setRemoteGateway(gateway); })
+      .catch(() => setError("无法读取 MCP 配置"));
+  }, []);
 
   const discover = async () => {
     setChecking(true);
@@ -28,6 +33,7 @@ export function MCPConnectionsPage() {
         <div><span className="eyebrow">MCP REGISTRY</span><h2>MCP 接入中心</h2><p>查看下游服务、显式工具分类以及未授权暴露的工具。</p></div>
         <button className="verify-button" onClick={() => void discover()} disabled={checking}><RefreshCw size={17} className={checking ? "spinning" : ""} />{checking ? "正在发现工具…" : "检查全部连接"}</button>
       </div>
+      {remoteGateway && <div className={`remote-gateway-banner ${remoteGateway.status}`}><div><span>REMOTE STREAMABLE HTTP GATEWAY</span><strong>{remoteGateway.endpoint}</strong></div><code>{remoteGateway.transport} · auth: {remoteGateway.authentication}</code><b>{remoteGateway.status.toUpperCase()}</b></div>}
       {registry && <div className="registry-meta"><span>配置文件</span><code>{registry.config_path}</code><span>最后检查</span><strong>{registry.last_checked_at ? new Date(registry.last_checked_at).toLocaleString() : "尚未执行"}</strong><span>状态</span><b className={registry.status === "healthy" ? "allow-text" : "configured-text"}>{registry.status.toUpperCase()}</b></div>}
       {error && <div className="playground-error">{error}</div>}
       <div className="server-grid">

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import Any
+from urllib.error import URLError
+from urllib.request import urlopen
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import PlainTextResponse
@@ -130,6 +133,8 @@ def create_app(
     approvals: ApprovalStore | None = None,
     project_root: Path | None = None,
     mcp_config_path: Path | None = None,
+    remote_mcp_url: str | None = None,
+    remote_mcp_health_url: str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="AgentGuard DataFlow API", version="0.1.0")
     store = TraceStore(runtime_dir)
@@ -140,6 +145,14 @@ def create_app(
     mcp_registry = MCPRegistryService(
         resolved_root,
         mcp_config_path or resolved_root / "config" / "mcp-servers.yaml",
+    )
+    configured_remote_url = (
+        remote_mcp_url or os.getenv("AGENTGUARD_REMOTE_MCP_URL") or "http://127.0.0.1:8100/mcp"
+    )
+    configured_health_url = (
+        remote_mcp_health_url
+        or os.getenv("AGENTGUARD_REMOTE_MCP_HEALTH_URL")
+        or "http://127.0.0.1:8100/health"
     )
 
     @app.get("/api/v1/health")
@@ -178,6 +191,25 @@ def create_app(
             return await mcp_registry.discover()
         except (OSError, RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    @app.get("/api/v1/gateway/remote")
+    def remote_gateway() -> dict[str, Any]:
+        status = "offline"
+        authentication = "unknown"
+        try:
+            with urlopen(configured_health_url, timeout=0.75) as response:  # noqa: S310
+                payload = json.loads(response.read().decode("utf-8"))
+                status = "online" if payload.get("status") == "ok" else "degraded"
+                authentication = str(payload.get("authentication", "unknown"))
+        except (OSError, URLError, ValueError, json.JSONDecodeError):
+            pass
+        return {
+            "status": status,
+            "transport": "streamable-http",
+            "endpoint": configured_remote_url,
+            "health_endpoint": configured_health_url,
+            "authentication": authentication,
+        }
 
     @app.get("/api/v1/traces")
     def list_traces() -> list[dict[str, Any]]:
