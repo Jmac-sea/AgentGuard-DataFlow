@@ -1,0 +1,20 @@
+version: "1.0"
+policy_id: agentguard-default
+
+defaults:
+  read: allow
+  internal_write: require_approval
+  external_write: allow
+  execute: deny
+
+rules:
+  - id: block_secret_to_external
+    description: Tracked secret data is flowing to an external write tool
+    priority: 100
+    when:
+      all:
+        - target.category.eq: external_write
+        - provenance.labels.contains: sensitivity:secret
+        - provenance.confidence.gte: 0.85
+    action: deny
+    severity: critical
