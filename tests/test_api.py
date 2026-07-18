@@ -59,3 +59,20 @@ def test_approval_api_returns_token_only_on_approve() -> None:
     approved = client.post(f"/api/v1/approvals/{request.approval_id}/approve").json()
     assert approved["status"] == "approved"
     assert approved["token"]
+
+
+def test_benchmark_api_runs_and_returns_markdown(tmp_path: Path) -> None:
+    client = TestClient(create_app(runtime_dir=tmp_path, policy_path=Path("policies/default.yaml")))
+
+    response = client.post(
+        "/api/v1/benchmarks/run",
+        json={"runs": 1, "modes": ["normal", "baseline", "protected"]},
+    )
+    assert response.status_code == 200
+    run_id = response.json()["run_id"]
+
+    listed = client.get("/api/v1/benchmarks").json()
+    assert listed[0]["run_id"] == run_id
+    report = client.get(f"/api/v1/benchmarks/{run_id}/report")
+    assert report.status_code == 200
+    assert "| baseline | 100% | 100% |" in report.text

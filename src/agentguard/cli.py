@@ -9,6 +9,7 @@ import typer
 import uvicorn
 
 from agentguard.api import create_app
+from agentguard.benchmark import DEFAULT_MODES, BenchmarkRunner
 from agentguard.mcp_scenarios import MCPScenarioRunner
 from agentguard.policy import PolicyEngine
 from agentguard.replay import ReplayEngine
@@ -18,6 +19,7 @@ app = typer.Typer(help="AgentGuard DataFlow local security gateway MVP")
 DEFAULT_PROJECT_ROOT = Path.cwd()
 DEFAULT_POLICY_PATH = Path("policies/default.yaml")
 DEFAULT_RUNTIME_DIR = Path("runtime")
+DEFAULT_BENCHMARK_RUNTIME_DIR = Path("runtime-benchmark")
 
 
 @app.callback()
@@ -83,6 +85,22 @@ def serve_api(
 ) -> None:
     """Serve Trace, Lineage, Policy, Replay, and Approval APIs."""
     uvicorn.run(create_app(runtime_dir=runtime_dir, policy_path=policy), host=host, port=port)
+
+
+@app.command()
+def benchmark(
+    runs: Annotated[int, typer.Option(help="Runs per benchmark mode")] = 5,
+    modes: Annotated[
+        list[str] | None,
+        typer.Option(help="Modes to include; repeat the option for multiple modes"),
+    ] = None,
+    runtime_dir: Annotated[Path, typer.Option(help="Benchmark output directory")] = (
+        DEFAULT_BENCHMARK_RUNTIME_DIR
+    ),
+) -> None:
+    """Run deterministic security scenarios and aggregate metrics."""
+    report = BenchmarkRunner(runtime_dir).run(runs=runs, modes=modes or DEFAULT_MODES)
+    typer.echo(json.dumps(report.model_dump(mode="json"), indent=2))
 
 
 if __name__ == "__main__":

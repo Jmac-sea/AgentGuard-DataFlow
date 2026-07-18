@@ -152,6 +152,15 @@ GET  /api/v1/benchmarks/{run_id}
 GET  /api/v1/benchmarks/{run_id}/report
 ```
 
+Benchmark运行请求：
+
+```json
+{
+  "runs": 10,
+  "modes": ["normal", "baseline", "protected", "protected-base64", "protected-split"]
+}
+```
+
 ### 审批
 
 ```http
@@ -235,4 +244,3 @@ GET /api/v1/events/stream
 - 回放结果明确展示策略变化。
 - 1,000 个 Trace 的列表操作保持流畅。
 - 关键页面在 1440×900 与 1920×1080 正常展示。
-

@@ -5,9 +5,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel, Field
 
 from agentguard.approval import ApprovalManager, ApprovalStatus
+from agentguard.benchmark import DEFAULT_MODES, BenchmarkRunner, BenchmarkStore
 from agentguard.policy import PolicyDocument, PolicyEngine
 from agentguard.replay import ReplayEngine
 
@@ -19,6 +21,11 @@ class PolicyValidationRequest(BaseModel):
 class ReplayRequest(BaseModel):
     trace_id: str
     policy_path: str | None = None
+
+
+class BenchmarkRunRequest(BaseModel):
+    runs: int = 5
+    modes: list[str] = Field(default_factory=lambda: list(DEFAULT_MODES))
 
 
 class TraceStore:
@@ -114,6 +121,7 @@ def create_app(
     app = FastAPI(title="AgentGuard DataFlow API", version="0.1.0")
     store = TraceStore(runtime_dir)
     approval_manager = approvals or ApprovalManager()
+    benchmark_store = BenchmarkStore(runtime_dir)
 
     @app.get("/api/v1/health")
     def health() -> dict[str, str]:
@@ -202,5 +210,31 @@ def create_app(
             raise HTTPException(status_code=404, detail="Approval not found") from exc
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @app.get("/api/v1/benchmarks")
+    def list_benchmarks() -> list[dict[str, Any]]:
+        return [report.model_dump(mode="json") for report in benchmark_store.list()]
+
+    @app.post("/api/v1/benchmarks/run")
+    def run_benchmark(request: BenchmarkRunRequest) -> dict[str, Any]:
+        try:
+            report = BenchmarkRunner(runtime_dir).run(runs=request.runs, modes=request.modes)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return report.model_dump(mode="json")
+
+    @app.get("/api/v1/benchmarks/{run_id}")
+    def get_benchmark(run_id: str) -> dict[str, Any]:
+        try:
+            return benchmark_store.get(run_id).model_dump(mode="json")
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Benchmark not found") from exc
+
+    @app.get("/api/v1/benchmarks/{run_id}/report", response_class=PlainTextResponse)
+    def get_benchmark_report(run_id: str) -> str:
+        try:
+            return benchmark_store.markdown(run_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Benchmark not found") from exc
 
     return app

@@ -46,6 +46,21 @@ uv run agentguard serve-api --runtime-dir runtime --policy policies/default.yaml
 OpenAPI is available at `http://127.0.0.1:8000/docs`. The first API slice includes Health,
 Trace, Lineage, Policy validation, Replay, and Approval endpoints.
 
+Run a deterministic benchmark and generate JSON plus Markdown reports:
+
+```powershell
+uv run agentguard benchmark --runs 10 --runtime-dir runtime-benchmark
+```
+
+Benchmark API endpoints:
+
+```text
+GET  /api/v1/benchmarks
+POST /api/v1/benchmarks/run
+GET  /api/v1/benchmarks/{run_id}
+GET  /api/v1/benchmarks/{run_id}/report
+```
+
 Runtime traces and reports are written under `runtime/` and never persist raw Canary values.
 
 ## Architecture

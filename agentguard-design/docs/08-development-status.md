@@ -51,12 +51,20 @@ github.create_issue
 - Approval列表、批准与拒绝。
 - 自动OpenAPI文档。
 
+### Benchmark
+
+- 多模式批量场景执行。
+- 每种模式可配置重复次数。
+- Attack Success、Secret Leak、Issue Creation、Blocking和Task Completion指标。
+- JSON与Markdown报告。
+- Benchmark列表、运行、详情和报告API。
+
 ## 当前验证结果
 
 ```text
 Ruff: 通过
 Mypy strict: 通过
-Pytest: 29 passed
+Pytest: 32 passed
 Coverage: 89%
 ```
 
@@ -88,6 +96,7 @@ uv run agentguard mcp-demo --mode protected-base64 --project-root .
 uv run agentguard mcp-demo --mode protected-split --project-root .
 uv run agentguard replay <trace.jsonl> --policy policies/default.yaml
 uv run agentguard serve-api --runtime-dir runtime --policy policies/default.yaml
+uv run agentguard benchmark --runs 10 --runtime-dir runtime-benchmark
 ```
 
 ## 与实施计划的对应关系
@@ -95,11 +104,11 @@ uv run agentguard serve-api --runtime-dir runtime --policy policies/default.yaml
 - M1透明代理：核心链路已完成；动态发现任意下游Server和配置文件仍待实现。
 - M2数据流追踪：原文、子串、Base64、Hex和多字段拆分重组已完成。
 - M3策略与回放：YAML策略、离线回放和人工审批已完成。
-- M4 API与前端：FastAPI第一阶段已完成；Benchmark和React前端待实现。
+- M4 API与前端：FastAPI和Benchmark第一阶段已完成；React前端待实现。
 
 ## 下一开发批次
 
-1. Benchmark批量执行、指标聚合和报告API。
-2. React工程、导航和设计系统。
-3. Trace列表与数据血缘页面。
+1. React工程、导航和设计系统。
+2. Trace列表与数据血缘页面。
+3. Benchmark结果页面。
 4. 策略、回放和审批页面。
