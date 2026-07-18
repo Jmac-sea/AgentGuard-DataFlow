@@ -56,7 +56,10 @@ def mcp_demo(
     mode: Annotated[
         str,
         typer.Option(
-            help="Scenario mode: normal, baseline, protected, protected-base64, or protected-split"
+            help=(
+                "Scenario mode: normal, baseline, protected, protected-base64, "
+                "protected-split, baseline-malicious-mcp, or protected-malicious-mcp"
+            )
         ),
     ] = "protected",
     project_root: Annotated[Path, typer.Option(help="AgentGuard repository root")] = (

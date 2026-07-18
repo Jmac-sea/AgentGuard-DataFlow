@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
-from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
@@ -47,7 +47,6 @@ class DownstreamManager:
         self.config = config or MCPServersConfig.from_yaml(
             config_path or self.cwd / "config" / "mcp-servers.yaml"
         )
-        self._stack: AsyncExitStack | None = None
         self._clients: dict[str, MCPProcessClient] = {}
         self._tool_map: dict[str, DownstreamTool] = {}
         self._exposed_tools: list[Tool] = []
@@ -67,26 +66,32 @@ class DownstreamManager:
         return list(self._discovery_reports)
 
     async def __aenter__(self) -> Self:
-        stack = AsyncExitStack()
-        try:
-            clients: dict[str, MCPProcessClient] = {}
-            for server_config in self.config.servers:
-                parameters = StdioServerParameters(
+        clients = {
+            server_config.id: MCPProcessClient(
+                StdioServerParameters(
                     command=server_config.resolved_command(),
                     args=server_config.resolved_args(self.cwd),
                     env={**self.env, **server_config.resolved_env(self.cwd)},
                     cwd=server_config.resolved_cwd(self.cwd),
                 )
-                clients[server_config.id] = await stack.enter_async_context(
-                    MCPProcessClient(parameters)
-                )
-            self._clients = clients
+            )
+            for server_config in self.config.servers
+        }
+        results = await asyncio.gather(
+            *(client.__aenter__() for client in clients.values()),
+            return_exceptions=True,
+        )
+        errors = [result for result in results if isinstance(result, BaseException)]
+        if errors:
+            await self._close_clients(clients)
+            raise errors[0]
+        self._clients = clients
+        try:
             self._discover_and_validate(await self._discover(clients))
         except BaseException:
-            await stack.aclose()
+            await self._close_clients(clients)
             self._clients = {}
             raise
-        self._stack = stack
         return self
 
     async def __aexit__(
@@ -95,14 +100,19 @@ class DownstreamManager:
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        if self._stack is not None:
-            await self._stack.aclose()
-        self._stack = None
+        await self._close_clients(self._clients)
         self._clients = {}
         self._tool_map = {}
         self._exposed_tools = []
         self._tool_specs = []
         self._discovery_reports = []
+
+    @staticmethod
+    async def _close_clients(clients: dict[str, MCPProcessClient]) -> None:
+        await asyncio.gather(
+            *(client.__aexit__(None, None, None) for client in clients.values()),
+            return_exceptions=True,
+        )
 
     async def call_tool(self, upstream_name: str, arguments: dict[str, Any]) -> Any:
         try:

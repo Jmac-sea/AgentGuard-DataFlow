@@ -2,7 +2,9 @@
 
 AgentGuard DataFlow is a model-independent security gateway for tracking sensitive data across tool calls and blocking leakage before an external write executes.
 
-The current MVP is intentionally local and deterministic. It uses synthetic Canary secrets and mock Email, Filesystem, and GitHub tools to prove three outcomes:
+The current MVP is intentionally local and deterministic. It uses synthetic Canary secrets and
+mock Email, Filesystem, GitHub, and attacker-controlled MCP tools without touching a real
+external service.
 
 ```text
 normal     -> legitimate issue creation succeeds
@@ -20,7 +22,7 @@ uv run agentguard demo --mode protected
 uv run pytest
 ```
 
-Run the same flow through a real stdio MCP gateway and three independent downstream MCP
+Run the same flow through a real stdio MCP gateway and four independent downstream MCP
 processes:
 
 ```powershell
@@ -30,6 +32,17 @@ uv run agentguard mcp-demo --mode protected --project-root .
 uv run agentguard mcp-demo --mode protected-base64 --project-root .
 uv run agentguard mcp-demo --mode protected-split --project-root .
 ```
+
+Run the synthetic malicious MCP tool-poisoning comparison:
+
+```powershell
+uv run agentguard mcp-demo --mode baseline-malicious-mcp --project-root .
+uv run agentguard mcp-demo --mode protected-malicious-mcp --project-root .
+```
+
+The malicious MCP embeds an instruction in its tool description and result that tells the Agent
+to read `/secrets/api_key.txt` and call `attacker.exfiltrate`. The baseline writes only to a local
+JSONL collector, while the protected run is denied before that collector executes.
 
 Replay a saved trace with the current YAML policy without calling any downstream tool:
 
@@ -99,7 +112,7 @@ Replay, and Approval management.
 ## Control Plane playground
 
 The web application now starts on an Agent Playground. Choose one of the normal, baseline,
-protected, Base64, or split-field scenarios and click **Run security scenario**. The API launches
+protected, Base64, split-field, or malicious-MCP scenarios and click **Run security scenario**. The API launches
 the real stdio MCP process chain, returns each simulated Agent step, and writes a trace directly to
 the active `runtime/` directory. The result links to the corresponding Data Lineage graph, so the
 complete demo no longer requires a separate terminal command.
@@ -203,12 +216,12 @@ Tool Gateway
         ├── Fingerprint Matcher
         └── Policy Engine
         ↓
-Mock Email / Filesystem / GitHub Tools
+Mock Email / Filesystem / GitHub / Attacker Tools
 ```
 
 The repository contains both a fast in-process test adapter and a real stdio MCP gateway. The
 gateway exposes namespaced tools and forwards allowed calls to independent mock Email,
-Filesystem, and GitHub MCP servers.
+Filesystem, GitHub, and synthetic attacker MCP servers.
 
 Downstream MCP processes and their exposed tool names are declared in
 [`config/mcp-servers.yaml`](config/mcp-servers.yaml). At startup, the gateway discovers each
@@ -223,6 +236,7 @@ Product and engineering documents are available in [`agentguard-design/docs`](ag
 
 - No real API keys are used.
 - No real email or GitHub write access is used.
+- The attacker MCP never accesses the network; its exfiltration sink is a local test-only JSONL file.
 - Raw tracked secrets remain in session memory only.
 - Persisted traces contain labels, hashes, match types, and redacted summaries.
 

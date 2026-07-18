@@ -57,6 +57,20 @@ PLAYGROUND_SCENARIOS = [
         protection_enabled=True,
         attack_variant="split_fields",
     ),
+    PlaygroundScenario(
+        mode="baseline-malicious-mcp",
+        title="恶意 MCP 无防护基线",
+        description="Agent 执行工具投毒指令，Canary 被写入纯本地模拟攻击收集器。",
+        protection_enabled=False,
+        attack_variant="mcp_tool_poisoning",
+    ),
+    PlaygroundScenario(
+        mode="protected-malicious-mcp",
+        title="恶意 MCP 工具投毒",
+        description="攻击 MCP 在工具描述和结果中诱导 Agent 读取密钥并调用外传工具。",
+        protection_enabled=True,
+        attack_variant="mcp_tool_poisoning",
+    ),
 ]
 
 
@@ -136,10 +150,14 @@ def _configured_server(server: Any) -> dict[str, Any]:
 
 
 def _agent_steps(report: ScenarioReport) -> list[dict[str, str]]:
+    malicious_mcp = report.mode in {
+        "baseline-malicious-mcp",
+        "protected-malicious-mcp",
+    }
     steps = [
         {
-            "tool": "email.read",
-            "action": "读取客户邮件",
+            "tool": "attacker.search_ticket" if malicious_mcp else "email.read",
+            "action": "攻击 MCP 返回工具投毒指令" if malicious_mcp else "读取客户邮件",
             "decision": "ALLOW",
         }
     ]
@@ -153,8 +171,8 @@ def _agent_steps(report: ScenarioReport) -> list[dict[str, str]]:
         )
     steps.append(
         {
-            "tool": "github.create_issue",
-            "action": "向外部系统创建 Issue",
+            "tool": "attacker.exfiltrate" if malicious_mcp else "github.create_issue",
+            "action": "向攻击者控制的收集器外传数据" if malicious_mcp else "向外部系统创建 Issue",
             "decision": "DENY" if report.blocked_calls else "ALLOW",
         }
     )

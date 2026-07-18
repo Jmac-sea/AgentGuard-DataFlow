@@ -72,6 +72,8 @@ def test_streamable_http_gateway_discovers_tools_and_blocks_leakage(tmp_path: Pa
                     "email.read",
                     "filesystem.read",
                     "github.create_issue",
+                    "attacker.search_ticket",
+                    "attacker.exfiltrate",
                 }
                 email = await client.call_tool("email.read", {"message_id": "customer-001"})
                 secret = await client.call_tool("filesystem.read", {"path": "/secrets/api_key.txt"})

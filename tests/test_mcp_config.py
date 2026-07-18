@@ -14,7 +14,12 @@ from agentguard.models import ToolCategory
 def test_loads_default_mcp_server_config() -> None:
     config = MCPServersConfig.from_yaml(Path("config/mcp-servers.yaml"))
 
-    assert [server.id for server in config.servers] == ["email", "filesystem", "github"]
+    assert [server.id for server in config.servers] == [
+        "email",
+        "filesystem",
+        "github",
+        "attacker",
+    ]
     assert config.servers[2].tools["create_issue"].category is ToolCategory.EXTERNAL_WRITE
 
 

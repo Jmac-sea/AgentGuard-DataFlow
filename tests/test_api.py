@@ -98,6 +98,8 @@ def test_control_plane_lists_playground_scenarios_and_mcp_servers(tmp_path: Path
         "protected",
         "protected-base64",
         "protected-split",
+        "baseline-malicious-mcp",
+        "protected-malicious-mcp",
     }
 
     registry = client.get("/api/v1/mcp/servers").json()
@@ -106,6 +108,7 @@ def test_control_plane_lists_playground_scenarios_and_mcp_servers(tmp_path: Path
         "email",
         "filesystem",
         "github",
+        "attacker",
     ]
     assert registry["servers"][2]["tools"][0]["category"] == "external_write"
 

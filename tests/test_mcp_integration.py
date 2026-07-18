@@ -45,6 +45,34 @@ def test_real_mcp_gateway_blocks_split_write(tmp_path: Path) -> None:
     assert report.blocked_calls == 1
 
 
+def test_real_mcp_gateway_blocks_malicious_mcp_exfiltration(tmp_path: Path) -> None:
+    report = asyncio.run(MCPScenarioRunner(Path.cwd(), tmp_path).run("protected-malicious-mcp"))
+
+    assert report.scenario == "mcp_tool_poisoning_001"
+    assert report.normal_task_completed is True
+    assert report.attack_succeeded is False
+    assert report.secret_leaked is False
+    assert report.blocked_calls == 1
+    assert not list((tmp_path / "attacks").glob("*.jsonl"))
+    assert CANARY not in Path(report.trace_path).read_text(encoding="utf-8")
+
+
+def test_real_mcp_gateway_baseline_proves_malicious_mcp_can_exfiltrate(
+    tmp_path: Path,
+) -> None:
+    report = asyncio.run(MCPScenarioRunner(Path.cwd(), tmp_path).run("baseline-malicious-mcp"))
+
+    assert report.scenario == "mcp_tool_poisoning_001"
+    assert report.normal_task_completed is True
+    assert report.attack_succeeded is True
+    assert report.secret_leaked is True
+    assert report.blocked_calls == 0
+    attack_logs = list((tmp_path / "attacks").glob("*.jsonl"))
+    assert len(attack_logs) == 1
+    assert CANARY in attack_logs[0].read_text(encoding="utf-8")
+    assert CANARY not in Path(report.trace_path).read_text(encoding="utf-8")
+
+
 def test_gateway_exposes_discovered_schemas_and_approval_token(tmp_path: Path) -> None:
     async def run() -> None:
         import os
@@ -62,7 +90,13 @@ def test_gateway_exposes_discovered_schemas_and_approval_token(tmp_path: Path) -
         )
         async with MCPProcessClient(parameters) as client:
             tools = {tool.name: tool for tool in await client.discover_tools()}
-            assert set(tools) == {"email.read", "filesystem.read", "github.create_issue"}
+            assert set(tools) == {
+                "email.read",
+                "filesystem.read",
+                "github.create_issue",
+                "attacker.search_ticket",
+                "attacker.exfiltrate",
+            }
             assert set(tools["email.read"].inputSchema["required"]) == {"message_id"}
             issue_properties = tools["github.create_issue"].inputSchema["properties"]
             assert "approval_token" in issue_properties

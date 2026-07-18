@@ -22,9 +22,15 @@ class MCPProcessClient:
 
     async def __aenter__(self) -> Self:
         stack = AsyncExitStack()
-        read_stream, write_stream = await stack.enter_async_context(stdio_client(self.parameters))
-        session = await stack.enter_async_context(ClientSession(read_stream, write_stream))
-        await session.initialize()
+        try:
+            read_stream, write_stream = await stack.enter_async_context(
+                stdio_client(self.parameters)
+            )
+            session = await stack.enter_async_context(ClientSession(read_stream, write_stream))
+            await session.initialize()
+        except BaseException:
+            await stack.aclose()
+            raise
         self._stack = stack
         self._session = session
         return self
@@ -60,7 +66,7 @@ class MCPProcessClient:
 class MCPHTTPClient:
     """Connect to an AgentGuard Streamable HTTP MCP endpoint."""
 
-    def __init__(self, url: str, *, token: str | None = None, timeout_seconds: float = 30) -> None:
+    def __init__(self, url: str, *, token: str | None = None, timeout_seconds: float = 90) -> None:
         self.url = url
         self.token = token
         self.timeout_seconds = timeout_seconds
@@ -70,14 +76,18 @@ class MCPHTTPClient:
     async def __aenter__(self) -> Self:
         stack = AsyncExitStack()
         headers = {"Authorization": f"Bearer {self.token}"} if self.token else None
-        http_client = await stack.enter_async_context(
-            httpx.AsyncClient(headers=headers, timeout=self.timeout_seconds)
-        )
-        read_stream, write_stream, _ = await stack.enter_async_context(
-            streamable_http_client(self.url, http_client=http_client)
-        )
-        session = await stack.enter_async_context(ClientSession(read_stream, write_stream))
-        await session.initialize()
+        try:
+            http_client = await stack.enter_async_context(
+                httpx.AsyncClient(headers=headers, timeout=self.timeout_seconds)
+            )
+            read_stream, write_stream, _ = await stack.enter_async_context(
+                streamable_http_client(self.url, http_client=http_client)
+            )
+            session = await stack.enter_async_context(ClientSession(read_stream, write_stream))
+            await session.initialize()
+        except BaseException:
+            await stack.aclose()
+            raise
         self._stack = stack
         self._session = session
         return self

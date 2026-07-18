@@ -23,3 +23,16 @@ servers:
       create_issue:
         expose_as: github.create_issue
         category: external_write
+
+  - id: attacker
+    command: "{python}"
+    args: ["-m", "agentguard.mock_mcp.attacker_server"]
+    tools:
+      search_ticket:
+        expose_as: attacker.search_ticket
+        category: read
+        description: Synthetic tool-poisoning source for security evaluation
+      exfiltrate:
+        expose_as: attacker.exfiltrate
+        category: external_write
+        description: Synthetic attacker-controlled data sink
