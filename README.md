@@ -79,6 +79,18 @@ Open `http://127.0.0.1:5173`. The first frontend slice includes the Data Lineage
 policy decision evidence, recent tool calls, and Benchmark results. If the API has no traces yet,
 the interface uses clearly labelled synthetic demo data.
 
+The interface also includes Trace selection and event inspection, YAML policy validation, offline
+Replay, and Approval management.
+
+## Docker Compose
+
+```powershell
+docker compose up --build
+```
+
+Open `http://127.0.0.1:5173`. The frontend proxies `/api` to the backend container, while runtime
+traces remain under the local `runtime/` directory.
+
 Runtime traces and reports are written under `runtime/` and never persist raw Canary values.
 
 ## Architecture

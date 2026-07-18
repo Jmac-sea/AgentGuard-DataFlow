@@ -45,3 +45,54 @@ export type Benchmark = {
   metrics: BenchmarkMetric[];
 };
 
+export type TraceEvent = {
+  event_id: string;
+  trace_id: string;
+  session_id: string;
+  timestamp: string;
+  type: string;
+  payload: Record<string, unknown>;
+};
+
+export type TraceDetail = {
+  trace_id: string;
+  events: TraceEvent[];
+};
+
+export type PolicyDocument = {
+  version: string;
+  policy_id: string;
+  defaults: Record<string, string>;
+  rules: Array<Record<string, unknown>>;
+};
+
+export type ReplayDecision = {
+  call_id: string;
+  tool_name: string;
+  original_action: string;
+  replayed_action: string;
+  original_rule: string | null;
+  replayed_rule: string | null;
+  changed: boolean;
+};
+
+export type ReplayReport = {
+  trace_id: string;
+  policy_id: string;
+  decisions: ReplayDecision[];
+};
+
+export type Approval = {
+  approval_id: string;
+  request_call_id: string;
+  session_id: string;
+  tool_name: string;
+  arguments_digest: string;
+  status: "pending" | "approved" | "rejected" | "consumed" | "expired";
+  severity: string;
+  reason: string;
+  matched_rule: string | null;
+  created_at: string;
+  expires_at: string | null;
+  token?: string;
+};

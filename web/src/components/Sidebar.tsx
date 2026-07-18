@@ -1,6 +1,6 @@
-import { Activity, GitBranch, Play, Scale, Settings2, ShieldCheck } from "lucide-react";
+import { Activity, CheckCheck, GitBranch, Play, Scale, Settings2, ShieldCheck } from "lucide-react";
 
-export type Page = "lineage" | "benchmark";
+export type Page = "lineage" | "policy" | "replay" | "approvals" | "benchmark";
 
 type SidebarProps = {
   page: Page;
@@ -10,8 +10,9 @@ type SidebarProps = {
 const items = [
   { label: "流量总览", icon: Activity, disabled: true },
   { label: "数据血缘", icon: GitBranch, page: "lineage" as const },
-  { label: "工具策略", icon: ShieldCheck, disabled: true },
-  { label: "攻击回放", icon: Play, disabled: true },
+  { label: "工具策略", icon: ShieldCheck, page: "policy" as const },
+  { label: "攻击回放", icon: Play, page: "replay" as const },
+  { label: "审批中心", icon: CheckCheck, page: "approvals" as const },
   { label: "基准评测", icon: Scale, page: "benchmark" as const },
 ];
 
@@ -43,4 +44,3 @@ export function Sidebar({ page, onPageChange }: SidebarProps) {
     </aside>
   );
 }
-

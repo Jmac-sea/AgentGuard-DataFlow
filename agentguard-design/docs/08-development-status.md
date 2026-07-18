@@ -68,6 +68,18 @@ github.create_issue
 - Benchmark结果表和防护对比条形图。
 - Trace、Lineage与Benchmark API接入。
 - API不可用时明确标记的合成演示数据。
+- Trace选择器和脱敏事件详情抽屉。
+- YAML策略验证页面。
+- 离线Replay决策对比页面。
+- Approval列表、批准、拒绝和一次性Token展示。
+
+### 容器化
+
+- Python API Dockerfile。
+- Node构建与Nginx运行的前端Dockerfile。
+- Nginx `/api` 反向代理。
+- Docker Compose服务依赖与健康检查。
+- 当前开发机未安装Docker CLI，Compose YAML结构已验证，实际镜像构建待Docker环境验证。
 
 ## 当前验证结果
 
@@ -77,7 +89,7 @@ Mypy strict: 通过
 Pytest: 32 passed
 Coverage: 89%
 Frontend build: passed
-Frontend tests: 1 passed
+Frontend tests: 2 passed
 ```
 
 端到端场景：
@@ -122,7 +134,7 @@ npm run dev
 
 ## 下一开发批次
 
-1. Trace选择器与事件详情抽屉。
-2. 策略、回放和审批页面。
-3. 前端端到端测试与Docker Compose。
-4. Benchmark真实MCP运行模式和性能指标。
+1. 前端端到端测试和错误/加载状态。
+2. Benchmark真实MCP运行模式和性能指标。
+3. SQLite持久化Approval和多进程共享。
+4. 在有Docker环境的CI中验证镜像构建。
